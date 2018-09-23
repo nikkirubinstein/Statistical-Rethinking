@@ -1,0 +1,17 @@
+---
+title: "Statistical Rethinking - Chapter 4"
+author: "Nikki Rubinstein"
+output:
+  html_document: 
+    toc: yes
+  html_notebook: 
+    theme: united
+    toc: yes
+---
+
+# Linear Models
+
+Linear regression attempts to learn about the mean and variance of a measurement using a Gaussian distribution to describe uncertainty.
+
+# 4.1 Why normal distributions are normal
+
