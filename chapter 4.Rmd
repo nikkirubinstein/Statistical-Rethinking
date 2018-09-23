@@ -13,5 +13,45 @@ output:
 
 Linear regression attempts to learn about the mean and variance of a measurement using a Gaussian distribution to describe uncertainty.
 
-# 4.1 Why normal distributions are normal
+## 4.1 Why normal distributions are normal
 
+### 4.1.1 Normal by addition
+
+Simulating 1000 experiments of 16 coin flips, with a step of randomly chosen size between 0 and 1 taken to the left for heads and right for tails. The resultant distribution is normal
+
+```{r}
+pos <- replicate(1000, sum(runif(16, -1, 1)))
+hist(pos)
+plot(density(pos))
+```
+
+Any process that adds together random values from the same distribution converges to normal - the central limit theorem.
+
+### 4.1.2 Normal by multiplication
+
+Simulating 10,000 experiments in which the effects of 12 alleles multiply to generate a growth factor. Convergence to a normal distribution occurs because the effect of multiplying small numbers approximates addition.
+
+```{r}
+growth <- replicate(10000, prod(1 + runif(12, 0, 0.1)))
+plot(density(growth))
+```
+ 
+
+```{r}
+big <- replicate (10000, prod(1 + runif(12, 0, 0.5)))
+small <- replicate(10000, prod(1 + runif(12, 0, 0.01)))
+plot(density(big), main = "Big values")
+plot(density(small), main = "Small values")
+```
+
+### 4.1.3 Normal by log-multiplication
+
+Although multiplying large deviates doesn't produce a Gaussian distribution on a linear scale, it does produce a Gaussian distribution when converted to a log scale. This is because adding logs is the equivalent of multiplying the original numbers.
+
+```{r}
+log.big <- replicate(10000, log(prod(1 + runif(12, 0, 0.5))))
+plot(density(log.big), main = "Big values on a log scale")
+```
+
+
+### 4.1.4 Using Gaussian distributions
