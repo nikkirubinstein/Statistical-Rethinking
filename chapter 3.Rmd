@@ -1,5 +1,6 @@
 ---
 title: "Statistical Rethinking - Chapter 3"
+author: "Nikki Rubinstein"
 output:
   html_document: 
     toc: yes
