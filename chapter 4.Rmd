@@ -55,3 +55,76 @@ plot(density(log.big), main = "Big values on a log scale")
 
 
 ### 4.1.4 Using Gaussian distributions
+
+The Gaussian is a member of a family of fundamental natural distributions known as the exponential family (ontological justification). The Gaussian distribution is the shape that can be realised in the largest number of ways and does not introduce any new assumptions (epistemological justification). The Gaussian distribution is essentially the exponent of a negative quadratic.
+
+## 4.2 A language for describing models
+
+Requirements for a model:
+1. Outcome variables
+2. Gaussian likelihood distribution (the plausability of individual observations of the outcome variables)
+3. Predictor variables
+4. Define model parameters (the relationship between the likelihood function and the predictor variables)
+5. Priors for all model paramters
+
+### 4.2.1 Re-describing the globe tossing model
+
+The posterior probability of p is proportional to the product of the likelihood (binomial distribution with 6 out of a possible 9) and the prior (uniform distribution between 0 and 1).
+
+```{r}
+w <- 6
+n <- 9
+p_grid <- seq(from = 0, to = 1, length.out = 100)
+posterior <- dbinom(w, n, p_grid) * dunif(p_grid, 0, 1)
+posterior <- posterior / sum(posterior)
+plot(posterior)
+```
+
+## 4.3 A Gaussian model of height
+
+### 4.3.1 The data
+
+Partial census data for the Dobe area !Kung San in the 1960s: height - cms; weight - kgs; age - years; and maleness - 1 male, 0 female.
+```{r}
+library(rethinking)
+library(dplyr)
+data(Howell1)
+d <- Howell1
+# filter out people under 18 years of age
+d2 <- d %>% filter(age >= 18)
+```
+
+### 4.3.1 The model
+
+Adult heights are nearly always approximately normal.
+
+```{r}
+# The distribution of heights
+hist(d2$height)
+```
+
+h<sub>i</sub> ~ Normal($\mu , \sigma$)
+
+This model is often described as being independent and identically distributed (IID). This is an epistemological assumption, inherent to the model, not necessarily the external world.
+
+We also need priors for the $\mu$ and $\sigma$ parameters of the above likelihood functoin.
+
+$\mu$ ~ Normal(178, 20)
+
+$\sigma$ ~ Uniform(0, 50)
+
+```{r}
+plot(100:250, dnorm(100:250, 178, 20), main = "Prior for mu", type = "l")
+
+plot(-10:60, dunif(-10:60, 0, 50), type = "l", main = "Prior for sigma")
+```
+
+Heights can be simulated by sampling from the prior distribution.
+
+```{r}
+sample_mu <- rnorm(10000, 178, 20)
+sample_sigma <- runif(10000, 0, 50)
+prior_h <- rnorm(10000, sample_mu, sample_sigma)
+hist(prior_h)
+```
+
