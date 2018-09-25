@@ -94,7 +94,7 @@ d <- Howell1
 d2 <- d %>% filter(age >= 18)
 ```
 
-### 4.3.1 The model
+### 4.3.2 The model
 
 Adult heights are nearly always approximately normal.
 
@@ -126,5 +126,120 @@ sample_mu <- rnorm(10000, 178, 20)
 sample_sigma <- runif(10000, 0, 50)
 prior_h <- rnorm(10000, sample_mu, sample_sigma)
 hist(prior_h)
+```
+
+### 4.3.3 Grid approximation of the posterior distribution
+
+The posterior distribution of a Gaussian by brute force...
+
+```{r}
+mu.list <- seq(from = 140, to = 160, length.out = 200)
+sigma.list <- seq(from = 4, to = 9, length.out = 200)
+post <- expand.grid(mu = mu.list, sigma = sigma.list)
+post$LL <- sapply(1:nrow(post), function (i) {
+  sum(dnorm(
+    d2$height,
+    mean = post$mu[i],
+    sd = post$sigma[i],
+    log = TRUE
+  ))
+})
+post$prod <- post$LL + dnorm(post$mu, 178, 20, TRUE) + 
+  dunif(post$sigma, 0, 50, TRUE)
+post$prob <- exp(post$prod - max(post$prod))
+# plot result
+rethinking::contour_xyz(post$mu, post$sigma, post$prob)
+rethinking::image_xyz(post$mu, post$sigma, post$prob)
+```
+
+### 4.3.4 Sampling from the posterior
+
+```{r}
+sample.rows <- sample(1:nrow(post), size = 10000, replace = TRUE, prob = post$prob)
+sample.mu <- post$mu[sample.rows]
+sample.sigma <- post$sigma[sample.rows]
+# Plot samples
+plot(sample.mu, sample.sigma, cex=0.5, pch = 16, col = col.alpha(rangi2, 0.1), xlab = "samples of mu", ylab = "samples of sigma")
+```
+
+Summarising the samples from the posterior distribution. As sample size increases, posterior density approaches the normal distribution.
+```{r}
+hist(sample.mu)
+hist(sample.sigma)
+```
+
+The highest posterior density intervals occur at:
+```{r}
+rethinking::HPDI(sample.mu)
+rethinking::HPDI(sample.sigma)
+```
+
+If you care about $\sigma$ you need to be careful of abusing the quadratic approximation, as the posterior deistribution of the standard deviation tends to have a long right tail, especially with smaller sample sizes.
+
+```{r}
+d3 <- sample(d2$height, size = 20)
+
+# unsure why the values of from and to for the mu.list and sigma.list are changed from the previous example
+mu.list <- seq(from = 150, to = 170, length.out = 200)
+sigma.list <- seq(from = 4, to = 20, length.out = 200)
+post2 <- expand.grid(mu = mu.list, sigma = sigma.list)
+post2$LL <- sapply(1:nrow(post2), function (i) {
+  sum(dnorm(
+    d3,
+    mean = post2$mu[i],
+    sd = post2$sigma[i],
+    log = TRUE
+  ))
+})
+post2$prod <- post2$LL + dnorm(post2$mu, 178, 20, TRUE) + 
+  dunif(post2$sigma, 0, 50, TRUE)
+post2$prob <- exp(post2$prod - max(post2$prod))
+
+sample2.rows <- sample(1:nrow(post2), size = 10000, replace = TRUE, prob = post2$prob)
+sample2.mu <- post2$mu[sample2.rows]
+sample2.sigma <- post2$sigma[sample2.rows]
+# Plot samples
+plot(sample2.mu, sample2.sigma, cex=0.5, pch = 16, col = col.alpha(rangi2, 0.1), xlab = "samples of mu", ylab = "samples of sigma")
+dens(sample2.sigma, norm.comp = TRUE)
+
+```
+
+### 4.3.5 Fitting the model with `map`
+
+The quadratic approximation allows us to make quick inferences about the shape of the posterior, with the peak of the posterior lying at the maximum a posteriori and the shape of the posterior distribution is provided by the quadratic approximation at this peak.
+
+```{r}
+d <- Howell1
+d2 <- d %>% filter(age >= 18)
+
+flist <- alist(
+  height ~ dnorm(mu, sigma),
+  mu ~ dnorm(178, 20),
+  sigma ~ dunif(0, 50)
+)
+
+# the maximum a posteriori model
+m4.1 <- rethinking::map(flist = flist, data = d2)
+rethinking::precis(m4.1, prob = 0.95)
+```
+
+The above numbers provide Gaussian approximations for each parameter's marginal distribution.
+
+The `map` function from the `rethinking` library uses a gradient ascent method to find the maximum a posteriori. The starting point is chosen randomly unless otherwise specified with a list of starting parameter values.
+
+Note: list() and alist() both create list objects, but list() evaluates the code within it, while alist() does not.
+
+Using a very narrow (informative) prior distribution restricts the posterior distribution.
+
+```{r}
+m4.2 <- rethinking::map(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu ~ dnorm(170, 0.1),
+    sigma ~ dunif(0, 50)
+  ),
+  data = d2
+)
+precis(m4.2)
 ```
 
