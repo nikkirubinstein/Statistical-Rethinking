@@ -1,1 +1,1 @@
-[Chapter 3 Notes](./Chapter_3.html)
+[Chapter 3 Notes](./chapter_3.html)
