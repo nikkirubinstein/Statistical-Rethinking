@@ -283,7 +283,7 @@ Due to the skewed nature of the distribution of $\sigma$, it is common to estima
 
 ```{r}
 # The exponent of log_sigma is used to ensure a positive value. The continuous log_sigma variable can be given a Gaussian prior
-m4.1_logsigma <- map(
+m4.1_logsigma <- rethinking::map(
   alist(
     height ~ dnorm(mu, exp(log_sigma)),
     mu ~ dnorm(178, 20),
@@ -595,6 +595,7 @@ shade(height.PI, weight.seq)
 ### 4E1 
 
 Question: In the model definition below, which line is the likelihood?
+
 $y_i$ ~ Normal($\mu, \sigma$) \
 $\mu$ ~ Normal(0, 10) \ 
 $\sigma$ ~ Uniform(0, 10)
@@ -611,4 +612,321 @@ Answer: Two ($\mu$ and $\sigma$)
 
 Question: Using the model definition above, write down the appropriate form of the Bayes' theroem that includes the proper likelihood and priors.
 
+$y_i$ ~ Normal($\mu, \sigma$) \
+$\mu$ ~ Normal(0, 10) \ 
+$\sigma$ ~ Uniform(0, 10)
+
+Answer: (from page 83)
+
+$\text{Pr}(\mu,\sigma | y) = \frac{\prod_i\text{Normal}(h_i|\mu,\sigma)\text{Normal}(\mu|0,10)\text{Uniform}(\sigma|0,10)}{\int\int\prod_i\text{Normal}(h_i|\mu,\sigma)\text{Normal}(\mu|0,10)\text{Uniform}(\sigma|0,10)d\mu d\sigma}$
+
+### 4E4
+
+Question: In the model definition below, which line is the linear model?
+
+$y_i$ ~ Normal($\mu_i, \sigma$) \
+$\mu_i = \alpha + \beta x_i$ \
+$\alpha$ ~ Normal(0, 10) \
+$\beta$ ~ Normal(0, 1) \
+$\sigma$ ~ Uniform(0, 10) 
+
+Answer: All of the above lines make up the linear model.
+
+### 4E5
+
+Question: In the model definition above, how many parameters are in the posterior distribution?
+
+Answer: Three ($\alpha$, $\beta$ and $\sigma$)
+
+## Medium
+
+### 4M1
+
+Question: For the model definition below, simulate observed heights from the prior (not the posterior)
+
+$y_i$ ~ Normal($\mu, \sigma$) \
+$\mu$ ~ Normal(0, 10) \ 
+$\sigma$ ~ Uniform(0, 10)
+
+Answer:
+```{r}
+num.samples <- 1e4 
+heights.sim <- rnorm(
+  n = num.samples, 
+  mean = rnorm(
+    n = num.samples, 
+    mean = 0, 
+    sd = 10), 
+  sd = runif(
+    n = num.samples, 
+    min = 0, 
+    max = 10)
+)
+hist(heights.sim)
+```
+
+### 4M2
+
+Question: Translate the model just above into a `map` formula.
+
+Answer:
+```{r, eval = FALSE}
+m4M2 <- rethinking::map(
+  flist = alist(
+    y ~ dnorm(mu, sigma),
+    mu ~ dnorm(0, 10),
+    sigma ~ dunif(0, 10)
+  ),
+  data = data.frame(y = heights.sim),
+  start=list(mu=0,sigma=1)
+)
+# returns an error - not sure why
+
+precis(m4M2)
+```
+
+### 4M3
+
+Question: Translate the `map` model formula below into a mathematical definition.
+
+```{r}
+flist <- alist(
+  y ~ dnorm(mu, sigma),
+  mu <- a + b * x,
+  a <- dnorm(0, 50),
+  b <- dunif(0, 10),
+  sigma ~ dunif(0, 50)
+)
+```
+
+Answer:
+
+$y_i$ ~ Normal($\mu_i, \sigma$) \
+$\mu_i = \alpha + \beta x_i$ \
+$\alpha$ ~ Normal(0, 50) \
+$\beta$ ~ Uniform(0, 10) \
+$\sigma$ ~ Uniform(0, 50) 
+
+### 4M4
+
+Question: A sample of students is measured for height each year for 3 years. After the third year, you want to fit a linear regression predicting height using year as a predictor. Write down the mathematical model definition for this regression, unsing any variable names and priors you choose. Be prepared to defend you choice of priors.
+
 Answer: 
+The height at time point zero is given by $\alpha$, so let's assume that on average they start at 100cm and each year they grow somewhere between 0 and 5cm.
+
+height$_i$ ~ Normal($\mu_i, \sigma$) \
+$\mu_i = \alpha + \beta x_i$ \  
+$\alpha$ ~ Normal(100, 10) \
+$\beta$ ~ Uniform(0, 5) \
+$\sigma$ ~ Uniform(0, 20)
+
+### 4M5
+
+Question: Now suppose I tell you that the average height in the first year was 120cm and that every student got taller each year. Does this information lead you to change your choice of priors? How?
+
+Answer: 
+Change alpha to be centred on 120cm and beta to include only positive (non-zero) values.
+
+$\alpha$ ~ Normal(120, 10) \
+$\beta$ ~ Uniform(0.1, 5)
+
+### 4M6
+
+Question: Now suppose I tell you that the variance among heights for students of the same age is never more than 64cm. How does this lead you to revise your priors?
+
+Answer: 
+$\sigma$ ~ Uniform(0, 8)
+
+## Hard
+
+### 4H1
+
+Question: The weights listed below were recorded in the !Kung census, but heights were not recorded for these individuals. Provide predicted heights and 89% intervals (either HPDI or PI) for each of these individuals. That is, fill in the table below, using model-based predictions.
+
+ Individual | weight | exptected height | 89% interval
+---------|------------|-----------------|--------------
+1 | 46.95 | |
+2 | 43.72 | |
+3 | 64.78 | |
+4 | 32.59 | |
+5 | 54.63 | | 
+
+Answer:
+```{r}
+library(scales)
+d <- Howell1
+d <- d %>% 
+  mutate(
+    weight.s = (weight - mean(weight)) / sd(weight),
+    weight.s2 = weight.s^2
+  )
+
+# create polynomial model
+m4H1 <- rethinking::map(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- a + b1 * weight.s + b2 * weight.s2,
+    a ~ dnorm(156, 100),
+    b1 ~ dnorm(0, 10),
+    b2 ~ dnorm(0, 10),
+    sigma ~ dunif(0, 50)
+  ),
+  data = d
+)
+post <- MASS::mvrnorm(n = 1e4, mu = coef(m4H1), Sigma=vcov(m4H1))
+
+# generate results
+weights <- c(46.95, 43.72, 64.78, 32.59, 54.63) 
+weights.s <- (weights - mean(d$weight))/sd(d$weight)
+pred_data <- data.frame(weight.s = weights.s, weight.s2 = weights.s^2)
+mu <- apply(pred_data, 1, function(i) post[,'a'] + post[,'b1'] * i[1] + post[,'b2'] * i[2])
+mu.mean <- sapply(data.frame(mu), mean)
+mu.PI <- sapply(data.frame(mu), PI)
+
+# print results
+heights <- data.frame(weights, mu.mean, t(mu.PI))
+heights
+
+plot(d$weight, d$height, col = alpha('black', 0.1), xlab = 'weight', ylab = 'height')
+points(heights$weights, heights$mu.mean, col = "blue")
+lines(0:70, sapply(0:70, function(x) {
+  x_s <- (x - mean(d$weight))/sd(d$weight)
+  mu <- coef(m4H1)
+  mu['a'] + mu['b1'] * x_s + mu['b2'] * x_s^2
+}))
+```
+  
+### 4H2 
+
+Question: Select out all the rows in the `Howell1` data with ages below 18 years of age. If you do it right, you should end up with a new data frame with 192 rows in it.
+
+(a) Fit a linear regression to these data using `map`. Present and interpret the estimates. For every 10 units increase in weight, how much taller does the model predict a child gets?
+
+(b) Plot the raw data, with height on the vertical axis and weight on the horizontal axis. Super-impose the MAP regression line and 89% HPDI for the mean. Also superimpose the 89% HPDI for predicted heights.
+
+(c) What aspects of the model fit concern you? Describe the kinds of assumptions you would change, if any, to improve the mode. You don't have to write any new code. Just explain what the model appears to be doing a bad job of, and what you hypothesise would be better model.
+
+Answer:
+
+```{r}
+d <- Howell1 %>% 
+  filter(age < 18)
+weight_mean <- mean(d$weight)
+weight_sd <- sd(d$weight)
+d <- d %>%
+  mutate(weight.s = (weight - weight_mean)/weight_sd)
+
+# fit model
+m4H2 <- rethinking::map(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- a + b * weight.s,
+    a ~ dnorm(100, 70),
+    b ~ dnorm(0, 10),
+    sigma ~ dunif(0, 50)
+  ),
+  data = d
+)
+
+# print estimates
+coef(m4H2)
+coef(m4H2)['b'] / weight_sd
+```
+
+The child with average weight is on average 108cm tall. For every 10 units increase in weight, the model predicts a 27 unit increase in height. 
+
+```{r}
+post <- MASS::mvrnorm(n = 1e4, mu = coef(m4H2), Sigma=vcov(m4H2))
+
+# generate results
+weights <- floor(min(d$weight)):ceiling(max(d$weight))
+weights.s <- (weights - weight_mean) / weight_sd
+pred_data <- data.frame(weight = weights.s)
+mu <- sapply(pred_data[[1]], function(i) {post[,'a'] + post[,'b'] * i})
+mu.mean <- sapply(data.frame(mu), mean)
+mu.HPDI <- sapply(data.frame(mu), rethinking::HPDI)
+sim.height <- sapply(weights.s, function(w)
+  rnorm(
+    n = nrow(post),
+    mean = post[,'a'] + post[,'b'] * w,
+    sd = post[,'sigma']
+  ))
+height.HPDI <- sapply(data.frame(sim.height), HPDI)
+
+# plot results
+plot(d$weight, d$height, col = alpha('black', 0.1), xlab = 'weight', ylab = 'height')
+lines(weights, mu.mean, col = "blue")
+rethinking::shade(mu.HPDI, weights)
+rethinking::shade(height.HPDI, weights)
+```
+
+The relationship between height and weight appears to be curved. The model doesn't fit the extremes very well. A parabolic fit might be more appropriate. 
+
+### 4H3
+
+Question: Suppose a colleague of yours, who works on allomtery, glances at the practice problems just above. Your colleague exclaims, "That's silly. Everyone know that it's only the logarithm of body weight that scales with height!" Let's take your colleague's advice and see what happens.
+
+(a) Model the relationship between height (cm) and the natural lograithm of weight (log-kg). Use the entire `Howell1` data frame, all 544 rows, adults and non-adults. Fit this model, using quadratic approximation:
+
+$h_i$ ~ Normal($\mu_i, \sigma$) \
+$\mu_i = \alpha + \beta\text{log}(w_i)$ \
+$\alpha$ ~ Normal(178,100) \ 
+$\beta$ ~ Normal(0, 100) \
+$\sigma$ ~ Uniform(0, 50)
+
+where $h_i$ is the height of the individual $i$ and $w_i$ is the weight (in kg) of individual $i$. The function for computing a natural log in R is just `log`. Can you interpret the resulting estimates?
+
+(b) Begin the plot:
+```{r, eval = FALSE}
+plot(height ~ weight, data = Howell1, col = col.alpha(rangi2, 0.4))
+```
+Then use samples from the quadratic approximate posterior of the model in (a) to superimpose on the plot: (1) the predicted mean height as a function of weight, (2) the 97% HPDI for the mean, and (3) the 97% HPDI for predicted heights.
+
+Answer:
+
+```{r}
+d <- Howell1
+
+# fit model
+m4H3 <- rethinking::map(
+  alist(
+    height ~ dnorm(mu, sigma),
+    mu <- a + b * log(weight),
+    a ~ dnorm(178, 100),
+    b ~ dnorm(0, 100),
+    sigma ~ dunif(0, 50)
+  ),
+  data = d
+)
+
+# print estimates
+coef(m4H3)
+```
+
+Every one log-unit change in weight corresponds to 47 units change in height.
+
+```{r}
+post <- MASS::mvrnorm(n = 1e4, mu = coef(m4H3), Sigma=vcov(m4H3))
+
+# generate results
+weights <- floor(min(d$weight)):ceiling(max(d$weight))
+weights.log <- log(weights)
+pred_data <- data.frame(weight = weights.log)
+mu <- sapply(pred_data[[1]], function(i) {post[,'a'] + post[,'b'] * i})
+mu.mean <- sapply(data.frame(mu), mean)
+mu.HPDI <- sapply(data.frame(mu), rethinking::HPDI, prob = 0.97)
+sim.height <- sapply(weights.log, function(w)
+  rnorm(
+    n = nrow(post),
+    mean = post[,'a'] + post[,'b'] * w,
+    sd = post[,'sigma']
+  ))
+height.HPDI <- sapply(data.frame(sim.height), HPDI, prob = 0.97)
+
+# plot results
+plot(d$weight, d$height, col = alpha('black', 0.4), xlab = 'weight', ylab = 'height')
+lines(weights, mu.mean, col = "blue")
+rethinking::shade(mu.HPDI, weights)
+rethinking::shade(height.HPDI, weights)
+```
+
